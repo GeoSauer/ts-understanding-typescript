@@ -1,0 +1,173 @@
+TS types are checked during compilation, JS types are checked during runtime
+If you have your TS file and compiled JS file open at the same time vscode will yell at you
+
+The shortcut to compile in TS is 'tsc fileToCompile.ts'
+To configure TS to compile on change, add --watch (or -w) to the end
+ex tsc fileToCompile.ts --watch
+To have TS compile the whole project, first run 'tsc --init' to initialize it as a TS project
+This creates a tsconfig.json file
+now you can just run 'tsc' to compile all files
+So again, now you can run 'tsc --watch' or 'tsc -w' to start watch mode on the whole project
+
+A standard project structure is to have a src folder for the TS files and a dist folder with the compiled JS files. This can be configured with outDir in the tsconfig.json file
+The compiler will automatically match your folder layout, so if you add a folder in src and move files around and then compile, it will match that structure in dist
+
+The TS bang
+when bringing in dom elements, TS doesn't know for sure that they exist and will throw an error
+Adding an exclamation point at the end tells TS you pinky promise it exists and should only be used if that is in fact true
+const button = document.querySelector('button')!; <--
+if you don't know for sure that it's true, you could wrap the button event listener in an if statement
+if (button) {
+button.addEventListener('click', ()=> {
+console.log('I am clicked!')
+})
+}
+
+Debugging TS
+In tsconfig.json set "sourceMap": true
+In the vscode toolbar click run -> start debugging
+this opens launch.json where you need to make sure the url is pointing to http://localhost:3000
+Compile your code so it generates the sourceMaps
+Add a breakpoint wherever you want to start debugging and click run -> start debugging again
+This will open up a Chrome window and the built in vscode debugging tools
+\*you can also just click the run and debug button in the sidebar if you have it enabled (which I do)
+
+TS using type inference to cut down on redundant code and enforce strict typing
+-for example if you wrote:
+let result = 'whatever'
+result = 5
+now TS will yell because you initialized result as a string and then redefined it as a number
+
+OBJECT TYPES
+written very similarly to JS objects, and TS will infer what the internal types should be
+JS object (key value pairs)
+const person = {
+name: 'Geo',
+age: 34
+}
+
+TS object type (key type pairs)
+const person: {
+name: string;
+age: number;
+}
+
+Combined so that the object's types are defined (don't do this if the types can safely be inferred, only do it if you need to define something like a tuple):
+const person: {
+name: string;
+age: number;
+hobbies: string[];
+role: [number, string];
+} = {
+name: "Geo",
+age: 34,
+hobbies: ['Sports', 'Cooking'],
+role: [2, 'author']
+};
+
+TUPLES
+these exist in other languages but not in JS
+A tuple is an array with a fixed length and a fixed type
+ex. role = [2, 'author'] <- this is just an array, but a tuple enforces that the first type should always be a number and the second type should always be a string
+They are important because if you don't specify it's a tuple, in the previous example TS will infer that you just want an array with either number or string types in it, but doesn't care the order or amount of each.
+A weird gotcha is that you can still .push into a tuple and TS won't yell even though the array has exceeded it's defined length. It will still yell though if you define the tuple like the previous example and then later try to manually assign like person.role = [0, 'admin', 'something else']
+
+ENUM
+also exists in some languages but not JS
+keyword that doesn't exist in JS -> enum { NEW, OLD }
+you'll often see enums in all caps but that's not a 'must-do', just common usage
+basically it assigns roles to numbers
+Most useful when you want values that are human readable with a mapped value behind the scenes
+Default behavior is to count up from 0, but defining a number on the first value will start the count there, or you can assign any string or number to each value if you need to.
+
+"any"
+represented by a asterisk
+should be used sparingly to not undermine the usefulness of TS
+or just don't use it unless absolutely necessary
+
+UNION TYPE
+lets you assign multiple types to a value
+ex. input1: number | string
+it can be any combo and can be chained as many times as needed
+can cause false positives on errors from the compiler that may require some runtime logic to correct
+
+LITERAL TYPES
+when you define the exact value of the type
+ex instead of name: string, a literal type would be name: 'Geo'
+
+TYPE ALIASES
+needs to be defined before it is called
+the alias can't be a JS reserve word like Date etc
+structure: type YourAlias = type
+ex. type NamesAndDates = string | number
+can be used to create easily used complex types throughout your code
+can also be used to alias complex object types
+ex. type User = { name: string; age: number };
+const u1: User = { name: 'Geo', age: 34 };
+
+You can refactor this code:
+function greet(user: { name: string; age: number }) {
+console.log('Hi, I am ' + user.name);
+}
+
+function isOlder(user: { name: string; age: number }, checkAge: number) {
+return checkAge > user.age;
+}
+
+To:
+
+type User = { name: string; age: number };
+
+function greet(user: User) {
+console.log('Hi, I am ' + user.name);
+}
+
+function isOlder(user: User, checkAge: number) {
+return checkAge > user.age;
+}
+
+RETURN TYPES
+the type of the value returned by a function can be seen by hovering over the function name
+the following is hella niche case and just for demonstrative purposes
+if the function doesn't return anything, the return type is void, which JS doesn't have
+so if you console.log a function with no return, JS will say undefined
+This gets more confusing because undefined is actually a valid type in TS
+ex let someValue = undefined
+manually declaring undefined as the return value of a function will throw an error
+function printResult(num: number): undefined {
+console.log('Result: ' + num)
+}
+the above will throw an error, if you really need the return value to be undefined then you would need to add a return to the function
+
+FUNCTION TYPE
+THE FUNCTION TYPE
+the snippet below shows using a variable to point at a function and then calling that variable as function
+the issue is that if you just type let combineValues, the default type is all since it's unspecified, and if you were to say combineValues = 5 you wouldn't get a TS error but you'd get a runtime error saying that 5 is not a function
+that's why you'd need to explicitly declare combineValues as a function type
+an issue with that though, is that if you have multiple functions and you point it at the wrong one you won't get a TS error but your output will be wrong
+
+let combineValues;
+
+combineValues = add;
+
+console.log(combineValues(8, 8));
+
+to get specific you can define a function type, sort of like an arrow function minus {}
+ex let variable: () => returnType
+
+to match the snippet above
+let combineValues: (a: number, b: number) => number
+basically in the () you put the number of arguments and their types that the matched function should receive, arrow, the return type
+now it will throw an error if you try to assign a function that doesn't match the type definition
+
+**BONUS NICHE TYPES**
+
+UNKNOWN TYPE
+similar to any, but different
+any basically turns off TS, but unknown functions similarly but requires additional checks to work
+a better type to use if possible is a union type, but unknown has some rare uses
+
+NEVER TYPE
+so in the case of a function that only throws an error, its return type is void, since it doesn't return anything
+but if you console.log it you won't even get an undefined since by throwing an error it actually crashes the script
+so it actually returns never as well, since it will never return a value, not even undefined
